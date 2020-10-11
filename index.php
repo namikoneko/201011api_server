@@ -1,34 +1,166 @@
 <?php
 require_once 'idiorm.php';
-ORM::configure('sqlite:./example.db');
+ORM::configure('sqlite:./data.db');
 ORM::configure('return_result_sets', true);
 require 'flight/Flight.php';
 
-/*
-Flight::route('/', function(){
-    echo 'hello world!<br>';
-});
-*/
-
-
-//if(isset($_GET['func'])){
-
-//if($_GET['func'] == "ins"){
-// ins ##################################################
-Flight::route('/ins', function(){
-	$str = "";
-	//$str .= "<form action='index.php?func=ins_exe' method='post'>";
-	$str .= "<form action='ins_exe' method='post'>";
-	$str .= "<input type='text' name='title'><br>";
-	$str .= "<textarea name='text'></textarea>";
-	$str .= "<br>";
-	$str .= "<input type='submit' value='send'>";
-	$str .= "</form>";
-	echo $str;
-
+// users ##################################################
+Flight::route('/users', function(){
+    $rows = ORM::for_table('users')->find_many();
+    $i = 0;
+    foreach($rows as $row){
+        $list[$i]["id"] = $row["id"];
+        $list[$i]["name"] = $row["name"];
+        //$list[$i]["text"] = $row["text"];
+        $i++;
+    }
+    header("Content-Type: application/json; charset=utf-8");
+    $arr = Flight::json($list);
+    echo $arr;
+//    echo "hello";
 });
 
-//}else if($_GET['func'] == "ins_exe"){
+// user_tasks ##################################################
+Flight::route('/users/@name', function($name){
+    $user = ORM::for_table('users')->where('name',$name)->find_one();
+    $userid = $user->id;
+    $page = $_GET['p'];
+    if(isset($page)){
+	//$per_page = 3;
+	$per_page = 15;
+	$offset = ($page - 1) * $per_page;
+      $rows = ORM::for_table('tasks')->where('userid',$userid)->limit($per_page)->offset($offset)->order_by_desc('updated')->find_many();
+    }else{
+      $rows = ORM::for_table('tasks')->where('userid',$userid)->order_by_desc('updated')->find_many();
+    }
+	$i = 0;
+	foreach($rows as $row){
+	    $str[$i]["id"] = $row["id"];
+	    $str[$i]["title"] = $row["title"];
+	    $str[$i]["text"] = $row["text"];
+	    $i++;
+	}
+    $list = $str;
+    header("Content-Type: application/json; charset=utf-8");
+    $arr = Flight::json($list);
+    echo $arr;
+});
+
+// updtask ##################################################
+Flight::route('/users/@name/upd/@id', function($name,$id){
+    $row = ORM::for_table('tasks')->find_one($id);
+    $str["id"] = $row->id;
+    $str["text"] = $row->text;
+    $str["name"] = $name;
+    //$str["page"] = $page;
+    header("Content-Type: application/json; charset=utf-8");
+    $arr = Flight::json($str);
+    echo $arr;
+});
+
+// updtaskexe ##################################################
+Flight::route('/tasks/updexe', function(){
+    $id = $_POST['id'];
+    $row = ORM::for_table('tasks')->find_one($id);
+    $row->text = $_POST['text'];
+    $row->updated = time();
+    $row->save();
+    //Flight::redirect('/users/' . $_POST['name']);
+});
+
+// deltask ##################################################
+Flight::route('/deltask/@name/@id', function($name,$id){
+    $row = ORM::for_table('tasks')->find_one($id);
+    $row->delete();
+    Flight::redirect('/users/' . $name . "?p=1");
+});
+
+// instask ##################################################
+Flight::route('/instask', function(){
+    $user = ORM::for_table('users')->where('name',$_POST['name'])->find_one();
+    $userid = $user->id;
+    $row = ORM::for_table('tasks')->create();
+    $row->title = $_POST['title'];
+    $row->text = $_POST['text'];
+    $row->userid = $userid;
+    $row->updated = time();
+    $row->save();
+    $name = $_POST['name'];
+    Flight::redirect('/users/' . $name . "?p=1");
+});
+
+// uptask ##################################################
+Flight::route('/uptask/@name/@id', function($name,$id){
+    $row = ORM::for_table('tasks')->find_one($id);
+    $row->updated = time();
+    $row->save();
+    Flight::redirect('/users/' . $name . "?p=1");
+});
+
+// findclname ##################################################
+Flight::route('/findclname/@name/@findtext', function($name,$findtext){
+    $user = ORM::for_table('users')->where('name',$name)->find_one();
+    $userid = $user->id;
+    $rows = ORM::for_table('tasks')->where('userid',$userid)->where_like('title',"%" . $findtext. "%")->find_many();
+    $i = 0;
+    foreach($rows as $row){
+        $str[$i]["id"] = $row["id"];
+        $str[$i]["title"] = $row["title"];
+        $str[$i]["text"] = $row["text"];
+        $i++;
+    }
+    $list = $str;
+    header("Content-Type: application/json; charset=utf-8");
+    $arr = Flight::json($list);
+    echo $arr;
+});
+
+// findtask ##################################################
+Flight::route('/findtask/@name/@findtext', function($name,$findtext){
+    $user = ORM::for_table('users')->where('name',$name)->find_one();
+    $userid = $user->id;
+    $rows = ORM::for_table('tasks')->where('userid',$userid)->where_like('text',"%" . $findtext. "%")->find_many();
+    $i = 0;
+    foreach($rows as $row){
+        $str[$i]["id"] = $row["id"];
+        $str[$i]["title"] = $row["title"];
+        $str[$i]["text"] = $row["text"];
+        $i++;
+    }
+    $list = $str;
+    header("Content-Type: application/json; charset=utf-8");
+    $arr = Flight::json($list);
+    echo $arr;
+});
+
+// copytask ##################################################
+Flight::route('/copytask/@name/@id', function($name,$id){
+    $user = ORM::for_table('users')->where('name',$name)->find_one();
+    $userid = $user->id;
+    $row = ORM::for_table('tasks')->find_one($id);
+
+    $newrow = ORM::for_table('tasks')->create();
+    $newrow->title = $row->title;
+    $newrow->text = $row->text;
+    $newrow->userid = $userid;
+    $newrow->updated = time();
+    $newrow->save();
+    Flight::redirect('/users/' . $name . "?p=1");
+});
+// cls ##################################################
+//Flight::route('/cls', function(){
+//    $rows = ORM::for_table('cl')->order_by_desc('updated')->find_many();
+//    $i = 0;
+//    foreach($rows as $row){
+//        $list[$i]["id"] = $row["id"];
+//        $list[$i]["name"] = $row["name"];
+//        //$list[$i]["text"] = $row["text"];
+//        $i++;
+//    }
+//    header("Content-Type: application/json; charset=utf-8");
+//    $arr = Flight::json($list);
+//    echo $arr;
+//});
 
 // ins_exe ##################################################
 Flight::route('/ins_exe', function(){
@@ -67,14 +199,16 @@ Flight::route('/upd', function(){
 	//$str .= $results["title"];
 	$str .= $results->title;
 	$str .= "'><br>";
-	$str .= "<textarea name='text'>";
+	$str .= "<textarea class='textUpd' name='text'>";
 	//$str .= $results["text"];
 	$str .= $results->text;
 	$str .= "</textarea>";
 	$str .= "<br>";
 	$str .= "<input type='submit' value='send'>";
 	$str .= "</form>";
-	echo $str;
+	Flight::render('header', array('heading' => 'Hello'), 'header_content');
+	Flight::render('body', array('str' => $str), 'body_content');
+	Flight::render('layout', array('title' => 'Home Page'));
 });
 
 //}else if($_GET['func'] == "upd_exe"){
@@ -222,11 +356,11 @@ Flight::route('/arc_exe_ret', function(){
 });
 
 // up ##################################################
-Flight::route('/up', function(){
-	$results = ORM::for_table('test')->find_one(Flight::request()->query->id);
+flight::route('/up', function(){
+	$results = orm::for_table('test')->find_one(flight::request()->query->id);
 	$results->updated = time();
 	$results->save();
-	Flight::redirect('');
+	flight::redirect('');
 });
 
 // up_arc ##################################################
