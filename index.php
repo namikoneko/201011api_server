@@ -21,7 +21,7 @@ Flight::route('/users', function(){
 });
 
 // user_tasks ##################################################
-Flight::route('/users/@name', function($name){
+Flight::route('/task/@name', function($name){
     $user = ORM::for_table('users')->where('name',$name)->find_one();
     $userid = $user->id;
     $page = $_GET['p'];
@@ -47,9 +47,10 @@ Flight::route('/users/@name', function($name){
 });
 
 // updtask ##################################################
-Flight::route('/users/@name/upd/@id', function($name,$id){
+Flight::route('/task/@name/upd/@id', function($name,$id){
     $row = ORM::for_table('tasks')->find_one($id);
     $str["id"] = $row->id;
+    $str["title"] = $row->title;
     $str["text"] = $row->text;
     $str["name"] = $name;
     //$str["page"] = $page;
@@ -62,17 +63,18 @@ Flight::route('/users/@name/upd/@id', function($name,$id){
 Flight::route('/tasks/updexe', function(){
     $id = $_POST['id'];
     $row = ORM::for_table('tasks')->find_one($id);
+    $row->title = $_POST['title'];
     $row->text = $_POST['text'];
     $row->updated = time();
     $row->save();
-    //Flight::redirect('/users/' . $_POST['name']);
+    //Flight::redirect('/task/' . $_POST['name']);
 });
 
 // deltask ##################################################
 Flight::route('/deltask/@name/@id', function($name,$id){
     $row = ORM::for_table('tasks')->find_one($id);
     $row->delete();
-    Flight::redirect('/users/' . $name . "?p=1");
+    Flight::redirect('/task/' . $name . "?p=1");
 });
 
 // instask ##################################################
@@ -86,7 +88,7 @@ Flight::route('/instask', function(){
     $row->updated = time();
     $row->save();
     $name = $_POST['name'];
-    Flight::redirect('/users/' . $name . "?p=1");
+    Flight::redirect('/task/' . $name . "?p=1");
 });
 
 // uptask ##################################################
@@ -94,7 +96,7 @@ Flight::route('/uptask/@name/@id', function($name,$id){
     $row = ORM::for_table('tasks')->find_one($id);
     $row->updated = time();
     $row->save();
-    Flight::redirect('/users/' . $name . "?p=1");
+    Flight::redirect('/task/' . $name . "?p=1");
 });
 
 // findclname ##################################################
@@ -145,7 +147,7 @@ Flight::route('/copytask/@name/@id', function($name,$id){
     $newrow->userid = $userid;
     $newrow->updated = time();
     $newrow->save();
-    Flight::redirect('/users/' . $name . "?p=1");
+    Flight::redirect('/task/' . $name . "?p=1");
 });
 // cls ##################################################
 //Flight::route('/cls', function(){
